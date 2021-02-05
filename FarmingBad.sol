@@ -19,11 +19,7 @@ ___________                    .__                 ___.               .___
 
 */
 
-pragma solidity 0.6.12;
 
-interface IMigratorChef {
-    function migrate(IERC20 token) external returns (IERC20);
-}
 
 // FarmingBad is the master of METH. He can make METH and he is a fair guy.
 //
@@ -62,7 +58,6 @@ contract FarmingBad is Ownable {
 
     METHToken public METH;    // The METH TOKEN!
     address public devaddr;    // Dev address.
-    IMigratorChef public migrator;    // The migrator contract. It has a lot of power. Can only be set through governance (owner).
 
     mapping(address => bool) public lpTokenExistsInPool;    // Track all added pools to prevent adding the same pool more then once.
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;    // Info of each user that stakes LP tokens.
@@ -137,28 +132,6 @@ contract FarmingBad is Ownable {
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
         poolInfo[_pid].allocPoint = _allocPoint;
     }
-
-    // Set the migrator contract. Can only be called by the owner.
-    function setMigrator(IMigratorChef _migrator) public onlyOwner {
-        migrator = _migrator;
-    }
-
-    // Migrate lp token to another lp contract.
-    // Can be called by anyone.
-    // We trust that migrator contract is good.
-    function migrate(uint256 _pid) public {
-        require(address(migrator) != address(0), "migrate: no migrator");
-        PoolInfo storage pool = poolInfo[_pid];
-        IERC20 lpToken = pool.lpToken;
-        uint256 bal = lpToken.balanceOf(address(this));
-        lpToken.safeApprove(address(migrator), bal);
-        IERC20 newLpToken = migrator.migrate(lpToken);
-        require(!lpTokenExistsInPool[address(newLpToken)],"MasterChef: New LP Token Address already exists in pool");
-        require(bal == newLpToken.balanceOf(address(this)), "migrate: bad");
-        pool.lpToken = newLpToken;
-        lpTokenExistsInPool[address(newLpToken)] = true;
-    }
-    
     
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
